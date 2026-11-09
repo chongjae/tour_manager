@@ -22,3 +22,23 @@ test('overnight flight stays one event; multi-day stay splits into check-in/out'
   assert.ok(out[1].title.startsWith('체크인') && out[2].title.startsWith('체크아웃'));
   assert.strictEqual(S.kindOf(out[1]), 'hotelIn');
 });
+
+test('flight → airport by name, then by destination keyword', () => {
+  S.configure({ destKeywords: ['도쿄', '하네다', 'Tokyo'] });
+  const airports = [{ id: 'gmp', name: '서울 / 김포 GMP' }, { id: 'hnd', name: '하네다 공항' }, { id: 'nrt', name: 'Narita Airport' }];
+  const at = (title) => S.flightAirport({ title }, airports);
+  assert.strictEqual(at('Flight to 도쿄 / 하네다 (OZ 1045)'), 'hnd');       // arrival named in title
+  assert.strictEqual(at('KE741 김포 → 도쿄(나리타)'), 'hnd');               // 나리타 ≠ "Narita" → destination keyword
+  assert.strictEqual(at('KE742 Tokyo Narita → 김포'), 'nrt');                    // outbound leaves from the left side
+  assert.strictEqual(at('Flight to 서울 / 김포 (OZ 1085)'), 'hnd');        // outbound, origin unknown → destination airport, not 김포
+  assert.strictEqual(S.flightAirport({ title: '라멘 예약' }, airports), null);
+  assert.strictEqual(S.flightAirport({ title: 'Flight to 도쿄' }, [airports[0]]), null); // no destination airport → caller falls back
+});
+
+test('arrival day starts at the flight\'s own airport', () => {
+  S.configure({ destKeywords: ['도쿄'] });
+  const ev = [{ id: 'f', date: '12-27', start: '15:50', end: '18:10', title: 'Flight to 도쿄 / 하네다' }];
+  const d = S.dayStart('12-27', ev, (e) => (e.id === 'f' ? 'hnd' : null), 'gmp');
+  assert.deepStrictEqual([d.placeId, d.min], ['hnd', 18 * 60 + 10 + 60]);
+  assert.strictEqual(S.dayStart('12-27', ev, () => null, 'gmp').placeId, 'gmp'); // unlinked → first airport
+});

@@ -241,3 +241,21 @@ test('upgradeTabs_: appends only missing setting rows, keeps values, refreshes a
   run('upgradeTabs_(ss)');
   assert.strictEqual(mine.data()[0][0], '내 메모', "a user's own 안내 tab is left alone");
 });
+
+test('all-day stay: checkout is the last covered day (Gmail 2-night stay 12/27 → exclusive end 12/30)', () => {
+  assert.strictEqual(run(`prevDay_('2026-12-30')`), '2026-12-29');
+  assert.strictEqual(run(`prevDay_('2027-01-01')`), '2026-12-31');
+  assert.strictEqual(run(`prevDay_('2028-03-01')`), '2028-02-29');
+  const stay = (title, start, endExclusive) => {
+    ctx.__ev = { getTitle: () => title, getAllDayStartDate: () => start, getAllDayEndDate: () => endExclusive };
+    const saved = [ctx.Utilities, ctx.Session, ctx.toEvent_];
+    ctx.Utilities = { formatDate: (d) => d };
+    ctx.Session = { getScriptTimeZone: () => 'Asia/Tokyo' };
+    run(`var __toEvent = toEvent_; toEvent_ = () => ({ id: 'x' })`);
+    try { return run('JSON.stringify(allDayStay_(__ev))'); } finally { run('toEvent_ = __toEvent'); [ctx.Utilities, ctx.Session] = saved; }
+  };
+  assert.deepStrictEqual(JSON.parse(stay('Stay at Sunshine City Prince Hotel', '2026-12-29', '2027-01-01')),
+    { id: 'x', startDate: '2026-12-29', start: '15:00', endDate: '2026-12-31', end: '11:00' });
+  assert.strictEqual(stay('Stay at Hotel', '2026-12-29', '2026-12-30'), 'null'); // single all-day → not a stay
+  assert.strictEqual(stay('Reservation for Tokyo Disneyland', '2026-12-28', '2026-12-30'), 'null'); // not a stay title
+});

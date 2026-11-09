@@ -34,7 +34,7 @@
     const today = events.filter((e) => e.date === date);
     const arrival = today.find((e) => kindOf(e) === 'flightIn');
     if (arrival) {
-      return { placeId: airportId, min: toMin(arrival.end || arrival.start) + settings.arrivalBufferMin, eventId: arrival.id,
+      return { placeId: placeOf(arrival) || airportId, min: toMin(arrival.end || arrival.start) + settings.arrivalBufferMin, eventId: arrival.id,
         reason: `${arrival.title} 도착 ${arrival.end || arrival.start} + 입국 ${settings.arrivalBufferMin}분` };
     }
     // latest check-in before today, even if unlinked (an older linked hotel would be the wrong one)
@@ -43,6 +43,22 @@
     const hotelId = (checkout && placeOf(checkout)) || (lastNight && placeOf(lastNight)) || null;
     if (checkout) return { placeId: hotelId, min: toMin(checkout.start), eventId: checkout.id, reason: `${checkout.title} ${checkout.start}` };
     return { placeId: hotelId, min: settings.defaultStartMin, eventId: null, reason: hotelId ? '전날 숙소에서 출발' : '숙소 일정에 장소가 연결되지 않음' };
+  }
+
+  // Airport (from `airports` [{id,name}]) a flight lands at (flightIn) or leaves from (flightOut).
+  // Title side first ("인천 → 하네다", "Flight to 도쿄 / 하네다"), then any airport named by a destination keyword
+  // (both flight kinds use the airport at the destination). null → caller falls back.
+  const GENERIC_WORD = /^(?:국제공항|공항|airport|international|intl)$/i;
+  function flightAirport(ev, airports) {
+    const kind = kindOf(ev);
+    if (kind !== 'flightIn' && kind !== 'flightOut') return null;
+    const to = ev.title.match(FLIGHT_TO_RE);
+    const sides = ev.title.split(/→|->/);
+    const side = kind === 'flightIn' ? (to ? to[1] : sides[1]) : (to ? '' : sides[0]); // "Flight to X" outbound: origin unknown
+    const words = (p) => String(p.name || '').split(/[\s/()·,\-]+/).filter((w) => w.length >= 2 && !GENERIC_WORD.test(w));
+    const text = String(side || '').toLowerCase();
+    const named = text && airports.find((p) => words(p).some((w) => text.includes(w.toLowerCase())));
+    return (named || airports.find((p) => settings.dest.test(String(p.name || ''))) || null)?.id ?? null;
   }
 
   function fixedFor(kind, ev) {
@@ -85,7 +101,7 @@
     });
   }
 
-  const api = { configure, settings: () => settings, expandEvents, kindOf, dayStart, fixedStops, mergeOrder, toMin };
+  const api = { configure, settings: () => settings, expandEvents, kindOf, dayStart, flightAirport, fixedStops, mergeOrder, toMin };
   if (typeof module !== 'undefined') module.exports = api;
   else root.Schedule = api;
 })(typeof window !== 'undefined' ? window : globalThis);

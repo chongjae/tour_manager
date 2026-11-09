@@ -148,7 +148,10 @@ function setPlaces(list) {
 }
 
 function loadEvents(raw) {
-  EVENTS = Schedule.expandEvents(raw).map((e) => ({ ...e, placeId: e.placeId || placeForCoords(e) }));
+  // Flights: an event's location is often the other end of the trip (or a hotel), so match airports by name instead.
+  const airports = PLACES.filter(isAirport);
+  EVENTS = Schedule.expandEvents(raw).map((e) => ({ ...e,
+    placeId: e.placeId || (isFlight(e) ? Schedule.flightAirport(e, airports) : placeForCoords(e)) }));
 }
 // Apps Script: registered routes are real calendar events (kind 'route'); prototype: kept in calendarAdds.
 const allEvents = () => (IS_GAS ? EVENTS : [...EVENTS, ...Object.values(state.calendarAdds).flat()]);

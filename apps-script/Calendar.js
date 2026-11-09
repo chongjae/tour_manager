@@ -22,12 +22,16 @@ function getTripEvents_() {
     .filter(Boolean);
 }
 
+const prevDay_ = (ymd) => new Date(Date.parse(`${ymd}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
+
 /** Multi-day all-day stay → timed check-in/check-out event; any other all-day event → null (ignored). */
 function allDayStay_(ev) {
   const tz = Session.getScriptTimeZone(); // all-day dates are midnights in the script zone
   const first = Utilities.formatDate(ev.getAllDayStartDate(), tz, 'yyyy-MM-dd');
-  const last = Utilities.formatDate(ev.getAllDayEndDate(), tz, 'yyyy-MM-dd'); // exclusive end = checkout day
-  if (first === last || !STAY_TITLE_RE.test(ev.getTitle())) return null;
+  // Gmail "Stay at …" spans check-in through check-out day inclusive (12/27–12/29 for 2 nights → exclusive end 12/30),
+  // so the checkout is the event's last day, one before the exclusive end.
+  const last = prevDay_(Utilities.formatDate(ev.getAllDayEndDate(), tz, 'yyyy-MM-dd'));
+  if (first >= last || !STAY_TITLE_RE.test(ev.getTitle())) return null;
   return { ...toEvent_(ev), startDate: first, start: ALL_DAY_CHECKIN, endDate: last, end: ALL_DAY_CHECKOUT };
 }
 
