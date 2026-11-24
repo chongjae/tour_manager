@@ -27,6 +27,7 @@ const MAX_STAY_MIN = 720;
 const NO_PLACES_MSG = '아직 장소가 없습니다. 설정한 My Maps 지도에 가고 싶은 곳을 추가하면 여기에서 동선을 짤 수 있습니다 (반영까지 최대 10분).';
 // Apps Script strips double-slash text inside template literals, so URL prefixes live in plain strings.
 const GMAPS = 'https://www.google.com/maps';
+const MYMAPS_EDIT = 'https://www.google.com/maps/d/edit?mid=';
 const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const OSM_CREDIT = '© OpenStreetMap contributors';
 const UPDATE_GUIDE_URL = 'https://github.com/chongjae/tour_manager#업데이트';
@@ -345,6 +346,7 @@ function renderRoute(plan) {
     <h2>${md(state.date)} (${WD[plan.wd]}) 동선</h2>
     ${sortBtn}<ol class="timeline">${startCard(plan)}${legs}</ol>${empty}${footer}
     <div class="edit-only"><h2>장소 추가 · 누르면 동선에 붙음 (숙소·공항 도착 전)</h2>
+    ${ACCESS.mid ? `<p style="margin:0 0 8px"><a class="link mymaps" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="${MYMAPS_EDIT}${encodeURIComponent(ACCESS.mid)}">🗺 My Maps 열기 · 새 장소·좌표 추가 (반영 최대 10분)</a></p>` : ''}
     <div class="chips" style="margin-bottom:8px">${filters}</div>
     ${PLACES.length ? `<div class="chips pick">${chips}</div>` : `<div class="empty">${NO_PLACES_MSG}</div>`}</div>`;
 }

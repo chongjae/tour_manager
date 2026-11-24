@@ -213,6 +213,7 @@ with tempfile.TemporaryDirectory() as tmp:
         fresh.clear = True
         key = 'a' * 32
         r = fresh(access={'required': True, 'key': ''}, edit_key=key)
+        check(r.locator('a.mymaps').count() == 0, 'view-only: no My Maps link')
         check(r.is_visible('#roNote') and '보기 전용' in r.inner_text('#roNote'), 'view-only notice shown')
         r.click('[data-tab="money"]')
         check(not r.is_visible('#expForm') and r.locator('.chips.pick').count() == 0 or not r.is_visible('.chips.pick'), 'view-only: no expense form / place picker')
@@ -220,7 +221,8 @@ with tempfile.TemporaryDirectory() as tmp:
         r.wait_for_timeout(600)
         check(r.evaluate('fake.writes.length') == 0, 'view-only: zero server writes')
         r.close()
-        w = fresh(access={'required': True, 'key': key}, edit_key=key)
+        w = fresh(access={'required': True, 'key': key, 'mid': 'MID-1'}, edit_key=key)
+        check(w.get_attribute('#tab-route a.mymaps', 'href') == 'https://www.google.com/maps/d/edit?mid=MID-1', 'edit link: My Maps link shown')
         w.click('[data-tab="money"]')
         w.fill('#amt', '800')
         w.click('#expForm .submit')

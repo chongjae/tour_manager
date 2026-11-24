@@ -14,15 +14,20 @@ const VERSION_URL = 'https://raw.githubusercontent.com/chongjae/tour_manager/mai
 const VERSION_CACHE_SEC = 6 * 60 * 60;
 
 function doGet(e) {
-  const title = config_().title || '여행 대시보드';
-  const k = editKey_();
-  const given = String((e && e.parameter && e.parameter.k) || '');
+  const cfg = config_();
+  const title = cfg.title || '여행 대시보드';
   const page = HtmlService.createTemplateFromFile('index');
-  // Only an exact match is echoed back (hex-only, so safe inside the inline <script>).
-  page.editAccess = JSON.stringify({ required: Boolean(k), key: k && given === k ? k : '' });
+  page.editAccess = JSON.stringify(editAccess_(editKey_(), String((e && e.parameter && e.parameter.k) || ''), cfg.mid));
   return page.evaluate()
     .setTitle(title)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** Only an exact key match is echoed back (hex-only, safe inside the inline <script>). The My Maps id ([\w-]+)
+ *  goes to editors only, so a view-only link never reveals the map. */
+function editAccess_(k, given, mid) {
+  const isEditor = !k || given === k;
+  return { required: Boolean(k), key: k && given === k ? k : '', mid: isEditor && mid ? mid : '' };
 }
 
 /** Latest released version from GitHub (cached). null when unknown — never blocks the page. */

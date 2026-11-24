@@ -259,3 +259,16 @@ test('all-day stay: checkout is the last covered day (Gmail 2-night stay 12/27 �
   assert.strictEqual(stay('Stay at Hotel', '2026-12-29', '2026-12-30'), 'null'); // single all-day → not a stay
   assert.strictEqual(stay('Reservation for Tokyo Disneyland', '2026-12-28', '2026-12-30'), 'null'); // not a stay title
 });
+
+test('editAccess_: My Maps id only for editors', () => {
+  const k = 'a'.repeat(32);
+  const view = JSON.parse(run(`JSON.stringify(editAccess_('${k}', '', 'MID1'))`));
+  assert.deepStrictEqual(view, { required: true, key: '', mid: '' });
+  const wrong = JSON.parse(run(`JSON.stringify(editAccess_('${k}', 'b', 'MID1'))`));
+  assert.strictEqual(wrong.mid, '');
+  const edit = JSON.parse(run(`JSON.stringify(editAccess_('${k}', '${k}', 'MID1'))`));
+  assert.deepStrictEqual(edit, { required: true, key: k, mid: 'MID1' });
+  const open = JSON.parse(run(`JSON.stringify(editAccess_('', '', 'MID1'))`)); // no edit key → everyone edits
+  assert.deepStrictEqual(open, { required: false, key: '', mid: 'MID1' });
+  assert.strictEqual(JSON.parse(run(`JSON.stringify(editAccess_('', '', ''))`)).mid, '');
+});
